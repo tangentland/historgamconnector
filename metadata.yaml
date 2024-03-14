@@ -1,0 +1,13 @@
+type: hgram
+scope_name: otelcol/histogramconnector
+
+status:
+  class: connector
+  stability:
+    development: [traces_to_metrics, metrics_to_metrics, logs_to_metrics]
+  distributions: [contrib]
+  codeowners:
+    active: [tholley]
+
+tests:
+  config:

@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/histogramconnector/internal/metadata"
+	"github.com/tangentland/historgamconnector/internal/metadata"
 )
 
 func TestLoadConfig(t *testing.T) {

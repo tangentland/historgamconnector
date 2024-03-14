@@ -1,4 +1,4 @@
-package histogramconnector
+package histogram
 
 import (
 	"context"

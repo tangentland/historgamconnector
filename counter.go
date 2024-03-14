@@ -16,15 +16,15 @@ import (
 
 var noAttributes = [16]byte{}
 
-func newCounter[K any](metricDefs map[string]metricDef[K]) *counter[K] {
-	return &counter[K]{
+func newCounter[K any](metricDefs map[string]metricDef[K]) *hgram[K] {
+	return &hgram[K]{
 		metricDefs: metricDefs,
 		counts:     make(map[string]map[[16]byte]*attrCounter, len(metricDefs)),
 		timestamp:  time.Now(),
 	}
 }
 
-type counter[K any] struct {
+type count[K any] struct {
 	metricDefs map[string]metricDef[K]
 	counts     map[string]map[[16]byte]*attrCounter
 	timestamp  time.Time
@@ -35,7 +35,7 @@ type attrCounter struct {
 	count uint64
 }
 
-func (c *counter[K]) update(ctx context.Context, attrs pcommon.Map, tCtx K) error {
+func (c *hgram[K]) update(ctx context.Context, attrs pcommon.Map, tCtx K) error {
 	var multiError error
 	for name, md := range c.metricDefs {
 		countAttrs := pcommon.NewMap()
@@ -67,7 +67,7 @@ func (c *counter[K]) update(ctx context.Context, attrs pcommon.Map, tCtx K) erro
 	return multiError
 }
 
-func (c *counter[K]) increment(metricName string, attrs pcommon.Map) error {
+func (c *hgram[K]) increment(metricName string, attrs pcommon.Map) error {
 	if _, ok := c.counts[metricName]; !ok {
 		c.counts[metricName] = make(map[[16]byte]*attrCounter)
 	}
@@ -85,7 +85,7 @@ func (c *counter[K]) increment(metricName string, attrs pcommon.Map) error {
 	return nil
 }
 
-func (c *counter[K]) appendMetricsTo(metricSlice pmetric.MetricSlice) {
+func (c *hgram[K]) appendMetricsTo(metricSlice pmetric.MetricSlice) {
 	for name, md := range c.metricDefs {
 		if len(c.counts[name]) == 0 {
 			continue

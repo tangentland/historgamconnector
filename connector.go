@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package histogramconnector // import "github.com/tangentland/collector/histogramconnector.git"
+package histogramconnector
 
 import (
 	"context"
@@ -24,9 +24,9 @@ import (
 
 const scopeName = "otelcol/histogramconnector"
 
-// count can count spans, span event, metrics, data points, or log records
+// hgram can count spans, span event, metrics, data points, or log records
 // and emit the counts onto a metrics pipeline.
-type count struct {
+type hgram struct {
 	metricsConsumer consumer.Metrics
 	component.StartFunc
 	component.ShutdownFunc
@@ -38,14 +38,14 @@ type count struct {
 	logsMetricDefs       map[string]metricDef[ottllog.TransformContext]
 }
 
-func (c *count) Capabilities() consumer.Capabilities {
+func (c *hgram) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: false}
 }
 
-func (c *count) ConsumeTraces(ctx context.Context, td ptrace.Traces) error {
+func (c *hgram) ConsumeTraces(ctx context.Context, td ptrace.Traces) error {
 	var multiError error
-	countMetrics := pmetric.NewMetrics()
-	countMetrics.ResourceMetrics().EnsureCapacity(td.ResourceSpans().Len())
+	hgramMetrics := pmetric.NewMetrics()
+	hgramMetrics.ResourceMetrics().EnsureCapacity(td.ResourceSpans().Len())
 	for i := 0; i < td.ResourceSpans().Len(); i++ {
 		resourceSpan := td.ResourceSpans().At(i)
 		spansCounter := newCounter[ottlspan.TransformContext](c.spansMetricDefs)
@@ -71,26 +71,26 @@ func (c *count) ConsumeTraces(ctx context.Context, td ptrace.Traces) error {
 			continue // don't add an empty resource
 		}
 
-		countResource := countMetrics.ResourceMetrics().AppendEmpty()
-		resourceSpan.Resource().Attributes().CopyTo(countResource.Resource().Attributes())
+		hgramResource := hgramMetrics.ResourceMetrics().AppendEmpty()
+		resourceSpan.Resource().Attributes().CopyTo(hgramResource.Resource().Attributes())
 
-		countResource.ScopeMetrics().EnsureCapacity(resourceSpan.ScopeSpans().Len())
-		countScope := countResource.ScopeMetrics().AppendEmpty()
-		countScope.Scope().SetName(scopeName)
+		hgramResource.ScopeMetrics().EnsureCapacity(resourceSpan.ScopeSpans().Len())
+		hgramScope := hgramResource.ScopeMetrics().AppendEmpty()
+		hgramScope.Scope().SetName(scopeName)
 
-		spansCounter.appendMetricsTo(countScope.Metrics())
-		spanEventsCounter.appendMetricsTo(countScope.Metrics())
+		spansCounter.appendMetricsTo(hgramScope.Metrics())
+		spanEventsCounter.appendMetricsTo(hgramScope.Metrics())
 	}
 	if multiError != nil {
 		return multiError
 	}
-	return c.metricsConsumer.ConsumeMetrics(ctx, countMetrics)
+	return c.metricsConsumer.ConsumeMetrics(ctx, hgramMetrics)
 }
 
-func (c *count) ConsumeMetrics(ctx context.Context, md pmetric.Metrics) error {
+func (c *hgram) ConsumeMetrics(ctx context.Context, md pmetric.Metrics) error {
 	var multiError error
-	countMetrics := pmetric.NewMetrics()
-	countMetrics.ResourceMetrics().EnsureCapacity(md.ResourceMetrics().Len())
+	hgramMetrics := pmetric.NewMetrics()
+	hgramMetrics.ResourceMetrics().EnsureCapacity(md.ResourceMetrics().Len())
 	for i := 0; i < md.ResourceMetrics().Len(); i++ {
 		resourceMetric := md.ResourceMetrics().At(i)
 		metricsCounter := newCounter[ottlmetric.TransformContext](c.metricsMetricDefs)
@@ -146,29 +146,29 @@ func (c *count) ConsumeMetrics(ctx context.Context, md pmetric.Metrics) error {
 			continue // don't add an empty resource
 		}
 
-		countResource := countMetrics.ResourceMetrics().AppendEmpty()
-		resourceMetric.Resource().Attributes().CopyTo(countResource.Resource().Attributes())
+		hgramResource := hgramMetrics.ResourceMetrics().AppendEmpty()
+		resourceMetric.Resource().Attributes().CopyTo(hgramResource.Resource().Attributes())
 
-		countResource.ScopeMetrics().EnsureCapacity(resourceMetric.ScopeMetrics().Len())
-		countScope := countResource.ScopeMetrics().AppendEmpty()
-		countScope.Scope().SetName(scopeName)
+		hgramResource.ScopeMetrics().EnsureCapacity(resourceMetric.ScopeMetrics().Len())
+		hgramScope := hgramResource.ScopeMetrics().AppendEmpty()
+		hgramScope.Scope().SetName(scopeName)
 
-		metricsCounter.appendMetricsTo(countScope.Metrics())
-		dataPointsCounter.appendMetricsTo(countScope.Metrics())
+		metricsCounter.appendMetricsTo(hgramScope.Metrics())
+		dataPointsCounter.appendMetricsTo(hgramScope.Metrics())
 	}
 	if multiError != nil {
 		return multiError
 	}
-	return c.metricsConsumer.ConsumeMetrics(ctx, countMetrics)
+	return c.metricsConsumer.ConsumeMetrics(ctx, hgramMetrics)
 }
 
-func (c *count) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
+func (c *hgram) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 	var multiError error
-	countMetrics := pmetric.NewMetrics()
-	countMetrics.ResourceMetrics().EnsureCapacity(ld.ResourceLogs().Len())
+	hgramMetrics := pmetric.NewMetrics()
+	hgramMetrics.ResourceMetrics().EnsureCapacity(ld.ResourceLogs().Len())
 	for i := 0; i < ld.ResourceLogs().Len(); i++ {
 		resourceLog := ld.ResourceLogs().At(i)
-		counter := newCounter[ottllog.TransformContext](c.logsMetricDefs)
+		hgram := newCounter[ottllog.TransformContext](c.logsMetricDefs)
 
 		for j := 0; j < resourceLog.ScopeLogs().Len(); j++ {
 			scopeLogs := resourceLog.ScopeLogs().At(j)
@@ -177,25 +177,25 @@ func (c *count) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 				logRecord := scopeLogs.LogRecords().At(k)
 
 				lCtx := ottllog.NewTransformContext(logRecord, scopeLogs.Scope(), resourceLog.Resource())
-				multiError = errors.Join(multiError, counter.update(ctx, logRecord.Attributes(), lCtx))
+				multiError = errors.Join(multiError, hgram.update(ctx, logRecord.Attributes(), lCtx))
 			}
 		}
 
-		if len(counter.counts) == 0 {
+		if len(hgram.counts) == 0 {
 			continue // don't add an empty resource
 		}
 
-		countResource := countMetrics.ResourceMetrics().AppendEmpty()
-		resourceLog.Resource().Attributes().CopyTo(countResource.Resource().Attributes())
+		hgramResource := hgramMetrics.ResourceMetrics().AppendEmpty()
+		resourceLog.Resource().Attributes().CopyTo(hgramResource.Resource().Attributes())
 
-		countResource.ScopeMetrics().EnsureCapacity(resourceLog.ScopeLogs().Len())
-		countScope := countResource.ScopeMetrics().AppendEmpty()
-		countScope.Scope().SetName(scopeName)
+		hgramResource.ScopeMetrics().EnsureCapacity(resourceLog.ScopeLogs().Len())
+		hgramScope := hgramResource.ScopeMetrics().AppendEmpty()
+		hgramScope.Scope().SetName(scopeName)
 
-		counter.appendMetricsTo(countScope.Metrics())
+		hgram.appendMetricsTo(hgramScope.Metrics())
 	}
 	if multiError != nil {
 		return multiError
 	}
-	return c.metricsConsumer.ConsumeMetrics(ctx, countMetrics)
+	return c.metricsConsumer.ConsumeMetrics(ctx, hgramMetrics)
 }
